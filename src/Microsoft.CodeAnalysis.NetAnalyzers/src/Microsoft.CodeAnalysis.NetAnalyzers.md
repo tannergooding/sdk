@@ -1944,6 +1944,18 @@ When multiple Path.Combine or Path.Join operations are nested, they can be colla
 |CodeFix|True|
 ---
 
+## [CA1879](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1879): Avoid allocating params arrays in loops
+
+Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.
+
+|Item|Value|
+|-|-|
+|Category|Performance|
+|Enabled|True|
+|Severity|Hidden|
+|CodeFix|False|
+---
+
 ## [CA2000](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2000): Dispose objects before losing scope
 
 If a disposable object is not explicitly disposed before all references to it are out of scope, the object will be disposed at some indeterminate time when the garbage collector runs the finalizer of the object. Because an exceptional event might occur that will prevent the finalizer of the object from running, the object should be explicitly disposed instead.

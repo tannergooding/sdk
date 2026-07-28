@@ -2312,6 +2312,15 @@ Widening and user defined conversions are not supported with generic types.</val
   <data name="CollapseMultiplePathOperationsCodeFixTitle" xml:space="preserve">
     <value>Collapse into single Path.{0} operation</value>
   </data>
+  <data name="AvoidParamsArrayAllocationInLoopsTitle" xml:space="preserve">
+    <value>Avoid allocating params arrays in loops</value>
+  </data>
+  <data name="AvoidParamsArrayAllocationInLoopsMessage" xml:space="preserve">
+    <value>The call to '{0}' implicitly allocates a params array on each loop iteration</value>
+  </data>
+  <data name="AvoidParamsArrayAllocationInLoopsDescription" xml:space="preserve">
+    <value>Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.</value>
+  </data>
   <data name="PreferReadOnlySpanOverSpanTitle" xml:space="preserve">
     <value>Use 'ReadOnlySpan&lt;T&gt;' or 'ReadOnlyMemory&lt;T&gt;' instead of 'Span&lt;T&gt;' or 'Memory&lt;T&gt;'</value>
   </data>

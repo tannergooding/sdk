@@ -67,6 +67,21 @@
         <target state="translated">引数として定数配列を使用しない</target>
         <note />
       </trans-unit>
+      <trans-unit id="AvoidParamsArrayAllocationInLoopsDescription">
+        <source>Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.</source>
+        <target state="new">Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="AvoidParamsArrayAllocationInLoopsMessage">
+        <source>The call to '{0}' implicitly allocates a params array on each loop iteration</source>
+        <target state="new">The call to '{0}' implicitly allocates a params array on each loop iteration</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="AvoidParamsArrayAllocationInLoopsTitle">
+        <source>Avoid allocating params arrays in loops</source>
+        <target state="new">Avoid allocating params arrays in loops</target>
+        <note />
+      </trans-unit>
       <trans-unit id="AvoidPotentiallyExpensiveCallWhenLoggingDescription">
         <source>In many situations, logging is disabled or set to a log level that results in an unnecessary evaluation for this argument.</source>
         <target state="translated">多くの場合、ログは無効化されているか、この引数に対して不要な評価を引き起こすログ レベルに設定されています。</target>

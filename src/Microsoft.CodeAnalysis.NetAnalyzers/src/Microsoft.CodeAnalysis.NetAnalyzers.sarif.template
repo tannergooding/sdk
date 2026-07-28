@@ -3586,6 +3586,26 @@
             ]
           }
         },
+        "CA1879": {
+          "id": "CA1879",
+          "shortDescription": "Avoid allocating params arrays in loops",
+          "fullDescription": "Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.",
+          "defaultLevel": "hidden",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1879",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "typeName": "AvoidParamsArrayAllocationInLoopsAnalyzer",
+            "languages": [
+              "C#",
+              "Visual Basic"
+            ],
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
         "CA2000": {
           "id": "CA2000",
           "shortDescription": "Dispose objects before losing scope",

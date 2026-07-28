@@ -67,6 +67,21 @@
         <target state="translated">不要将常量数组作为参数</target>
         <note />
       </trans-unit>
+      <trans-unit id="AvoidParamsArrayAllocationInLoopsDescription">
+        <source>Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.</source>
+        <target state="new">Calling a method that takes a params array inside a loop implicitly allocates a new array on every iteration. When the array contents do not change between iterations, the allocation can be hoisted out of the loop by explicitly creating the array once before the loop and passing it to the method.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="AvoidParamsArrayAllocationInLoopsMessage">
+        <source>The call to '{0}' implicitly allocates a params array on each loop iteration</source>
+        <target state="new">The call to '{0}' implicitly allocates a params array on each loop iteration</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="AvoidParamsArrayAllocationInLoopsTitle">
+        <source>Avoid allocating params arrays in loops</source>
+        <target state="new">Avoid allocating params arrays in loops</target>
+        <note />
+      </trans-unit>
       <trans-unit id="AvoidPotentiallyExpensiveCallWhenLoggingDescription">
         <source>In many situations, logging is disabled or set to a log level that results in an unnecessary evaluation for this argument.</source>
         <target state="translated">在许多情况下，日志记录会被禁用，或设置为导致对此参数进行不必要的计算的日志级别。</target>
