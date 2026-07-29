@@ -2312,6 +2312,18 @@ Widening and user defined conversions are not supported with generic types.</val
   <data name="CollapseMultiplePathOperationsCodeFixTitle" xml:space="preserve">
     <value>Collapse into single Path.{0} operation</value>
   </data>
+  <data name="PreferValueTupleOverTupleTitle" xml:space="preserve">
+    <value>Prefer 'ValueTuple' over 'Tuple'</value>
+  </data>
+  <data name="PreferValueTupleOverTupleMessage" xml:space="preserve">
+    <value>Prefer the value type 'ValueTuple' over the reference type 'Tuple' to avoid an allocation</value>
+  </data>
+  <data name="PreferValueTupleOverTupleDescription" xml:space="preserve">
+    <value>The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.</value>
+  </data>
+  <data name="PreferValueTupleOverTupleCodeFixTitle" xml:space="preserve">
+    <value>Replace 'Tuple' with 'ValueTuple'</value>
+  </data>
   <data name="PreferReadOnlySpanOverSpanTitle" xml:space="preserve">
     <value>Use 'ReadOnlySpan&lt;T&gt;' or 'ReadOnlyMemory&lt;T&gt;' instead of 'Span&lt;T&gt;' or 'Memory&lt;T&gt;'</value>
   </data>

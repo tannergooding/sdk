@@ -2493,6 +2493,26 @@ Enumerable.OfType&lt;T&gt; 使用的一般型別檢查 (C# 'is' operator/IL 'isi
         <target state="translated">建議在 StringBuilder 上使用強型別 Append 及 Insert 方法多載</target>
         <note />
       </trans-unit>
+      <trans-unit id="PreferValueTupleOverTupleCodeFixTitle">
+        <source>Replace 'Tuple' with 'ValueTuple'</source>
+        <target state="new">Replace 'Tuple' with 'ValueTuple'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="PreferValueTupleOverTupleDescription">
+        <source>The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.</source>
+        <target state="new">The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="PreferValueTupleOverTupleMessage">
+        <source>Prefer the value type 'ValueTuple' over the reference type 'Tuple' to avoid an allocation</source>
+        <target state="new">Prefer the value type 'ValueTuple' over the reference type 'Tuple' to avoid an allocation</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="PreferValueTupleOverTupleTitle">
+        <source>Prefer 'ValueTuple' over 'Tuple'</source>
+        <target state="new">Prefer 'ValueTuple' over 'Tuple'</target>
+        <note />
+      </trans-unit>
       <trans-unit id="PreventNumericIntPtrUIntPtrBehavioralChangesConversionNotThrowMessage">
         <source>Starting with .NET 7 the explicit conversion '{0}' will not throw when overflowing in an unchecked context. Wrap the expression with a 'checked' statement to restore the .NET 6 behavior.</source>
         <target state="translated">從 .NET 7 開始，在未選取的內容中溢位時將不會明確轉換 '{0}'。使用 'checked' 陳述式包裝運算式，以還原 .NET 6 行為。</target>

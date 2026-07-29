@@ -3586,6 +3586,26 @@
             ]
           }
         },
+        "CA1880": {
+          "id": "CA1880",
+          "shortDescription": "Prefer 'ValueTuple' over 'Tuple'",
+          "fullDescription": "The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1880",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "typeName": "PreferValueTupleOverTupleAnalyzer",
+            "languages": [
+              "C#",
+              "Visual Basic"
+            ],
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
         "CA2000": {
           "id": "CA2000",
           "shortDescription": "Dispose objects before losing scope",

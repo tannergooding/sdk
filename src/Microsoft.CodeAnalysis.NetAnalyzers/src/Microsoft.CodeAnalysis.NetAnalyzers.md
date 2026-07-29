@@ -1944,6 +1944,18 @@ When multiple Path.Combine or Path.Join operations are nested, they can be colla
 |CodeFix|True|
 ---
 
+## [CA1880](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1880): Prefer 'ValueTuple' over 'Tuple'
+
+The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.
+
+|Item|Value|
+|-|-|
+|Category|Performance|
+|Enabled|True|
+|Severity|Info|
+|CodeFix|True|
+---
+
 ## [CA2000](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2000): Dispose objects before losing scope
 
 If a disposable object is not explicitly disposed before all references to it are out of scope, the object will be disposed at some indeterminate time when the garbage collector runs the finalizer of the object. Because an exceptional event might occur that will prevent the finalizer of the object from running, the object should be explicitly disposed instead.

@@ -471,6 +471,15 @@ namespace Analyzer.Utilities
         public const string SystemThreadingThread = "System.Threading.Thread";
         public const string SystemThreadingVolatile = "System.Threading.Volatile";
         public const string SystemTimeSpan = "System.TimeSpan";
+        public const string SystemTuple = "System.Tuple";
+        public const string SystemTuple1 = "System.Tuple`1";
+        public const string SystemTuple2 = "System.Tuple`2";
+        public const string SystemTuple3 = "System.Tuple`3";
+        public const string SystemTuple4 = "System.Tuple`4";
+        public const string SystemTuple5 = "System.Tuple`5";
+        public const string SystemTuple6 = "System.Tuple`6";
+        public const string SystemTuple7 = "System.Tuple`7";
+        public const string SystemTuple8 = "System.Tuple`8";
         public const string SystemType = "System.Type";
         public const string SystemUri = "System.Uri";
         public const string SystemWebConfigurationHttpRuntimeSection = "System.Web.Configuration.HttpRuntimeSection";
