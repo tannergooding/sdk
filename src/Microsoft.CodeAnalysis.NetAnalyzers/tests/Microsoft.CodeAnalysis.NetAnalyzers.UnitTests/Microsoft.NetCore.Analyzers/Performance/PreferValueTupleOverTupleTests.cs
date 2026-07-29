@@ -230,6 +230,46 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         }
 
         [TestMethod]
+        public async Task ExplicitTupleTarget_NoFixOfferedAsync()
+        {
+            // The allocation is still worth flagging, but swapping only the callsite would leave a
+            // 'ValueTuple' assigned to an explicitly typed 'Tuple' local, which does not compile. The
+            // fixer must report and offer no fix rather than produce a build break.
+            var source = """
+                using System;
+
+                internal class C
+                {
+                    private void M()
+                    {
+                        Tuple<int, string> t = [|Tuple.Create(1, "a")|];
+                    }
+                }
+                """;
+            await VerifyCS.VerifyCodeFixAsync(source, source);
+        }
+
+        [TestMethod]
+        public async Task NestedExplicitTupleTarget_NoFixOfferedAsync()
+        {
+            // Both allocations are unfixable: the outer flows into an explicit 'Tuple' local, and the
+            // inner is an argument to the outer 'Tuple' constructor whose parameter type is fixed. Neither
+            // can be rewritten in isolation without breaking the build, so no fix is offered for either.
+            var source = """
+                using System;
+
+                internal class C
+                {
+                    private void M()
+                    {
+                        Tuple<int, Tuple<string, int>> t = {|CA1880:new Tuple<int, Tuple<string, int>>(1, {|CA1880:new Tuple<string, int>("a", 2)|})|};
+                    }
+                }
+                """;
+            await VerifyCS.VerifyCodeFixAsync(source, source);
+        }
+
+        [TestMethod]
         public async Task ValueTuple_NoDiagnosticAsync()
         {
             var source = """

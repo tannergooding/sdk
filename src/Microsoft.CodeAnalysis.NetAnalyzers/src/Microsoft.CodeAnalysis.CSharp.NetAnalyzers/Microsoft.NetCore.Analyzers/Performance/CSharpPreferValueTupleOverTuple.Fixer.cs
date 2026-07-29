@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
-using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Operations;
 using Microsoft.NetCore.Analyzers;
 using Microsoft.NetCore.Analyzers.Performance;
 
@@ -42,10 +42,20 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var root = await context.Document.GetRequiredSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
+            var node = root.FindNode(context.Span, getInnermostNodeForTie: true);
 
-            // Only offer the fix for the callsite shapes it can rewrite; signature diagnostics share the rule ID
-            // but have no fix, so registering unconditionally would surface a lightbulb that does nothing.
-            if (GetTupleNameToReplace(root, context.Span) is null)
+            // Signature diagnostics share the rule ID but have no callsite to rewrite, so registering the fix
+            // for them would only surface a lightbulb that does nothing.
+            if (GetTupleNameToReplace(node) is null)
+            {
+                return;
+            }
+
+            // Swapping only the callsite breaks the build when the allocation flows into a location that is
+            // independently typed as the reference 'Tuple' (e.g. 'Tuple<int, string> t = Tuple.Create(...)').
+            // Still report the diagnostic, but do not offer a fix that would not compile.
+            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
+            if (semanticModel is null || ConversionWouldBreakBuild(semanticModel, node, context.CancellationToken))
             {
                 return;
             }
@@ -60,13 +70,18 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 
         private static async Task<Document> FixAllAsync(Document document, ImmutableArray<Diagnostic> diagnostics, CancellationToken cancellationToken)
         {
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
             var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
             var root = editor.OriginalRoot;
 
             // Inner nodes come first so an enclosing rewrite is applied after the ones it contains.
             foreach (var diagnostic in diagnostics.OrderByDescending(diagnostic => diagnostic.Location.SourceSpan.Start))
             {
-                if (GetTupleNameToReplace(root, diagnostic.Location.SourceSpan) is { } tupleName)
+                var node = root.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true);
+
+                if (GetTupleNameToReplace(node) is { } tupleName &&
+                    semanticModel is not null &&
+                    !ConversionWouldBreakBuild(semanticModel, node, cancellationToken))
                 {
                     editor.ReplaceNode(tupleName, (currentNode, _) => WithValueTupleIdentifier((SimpleNameSyntax)currentNode));
                 }
@@ -75,17 +90,12 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             return editor.GetChangedDocument();
         }
 
-        private static SimpleNameSyntax? GetTupleNameToReplace(SyntaxNode root, TextSpan span)
+        private static SimpleNameSyntax? GetTupleNameToReplace(SyntaxNode node) => node switch
         {
-            var node = root.FindNode(span, getInnermostNodeForTie: true);
-
-            return node switch
-            {
-                ObjectCreationExpressionSyntax objectCreation => GetTupleName(objectCreation.Type),
-                InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax memberAccess } => GetTupleName(memberAccess.Expression),
-                _ => null,
-            };
-        }
+            ObjectCreationExpressionSyntax objectCreation => GetTupleName(objectCreation.Type),
+            InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax memberAccess } => GetTupleName(memberAccess.Expression),
+            _ => null,
+        };
 
         // The 'Tuple' name can appear as a bare identifier ('Tuple'), the right-hand side of a
         // qualified name ('System.Tuple'), an aliased name ('global::System.Tuple'), or a member
@@ -108,6 +118,99 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             return tupleName is GenericNameSyntax genericName
                 ? genericName.WithIdentifier(newIdentifier)
                 : SyntaxFactory.IdentifierName(newIdentifier);
+        }
+
+        // A 'ValueTuple' is convertible to 'object' and to every interface the reference 'Tuple' implements,
+        // so the only target that stops compiling after the swap is one whose type is independently fixed to a
+        // reference 'Tuple'. A 'var' local, an inferred method type parameter, or a bare expression statement
+        // all adapt to the rewritten type and stay valid.
+        private static bool ConversionWouldBreakBuild(SemanticModel semanticModel, SyntaxNode allocation, CancellationToken cancellationToken)
+        {
+            var expression = (ExpressionSyntax)allocation;
+            while (expression.Parent is ParenthesizedExpressionSyntax parenthesized)
+            {
+                expression = parenthesized;
+            }
+
+            switch (expression.Parent)
+            {
+                case EqualsValueClauseSyntax equalsValue:
+                    return InitializerTargetIsReferenceTuple(semanticModel, equalsValue, cancellationToken);
+
+                case CastExpressionSyntax cast:
+                    return IsReferenceTuple(semanticModel.GetTypeInfo(cast.Type, cancellationToken).Type, semanticModel.Compilation);
+
+                case AssignmentExpressionSyntax assignment when assignment.Right == expression:
+                    return IsReferenceTuple(semanticModel.GetTypeInfo(assignment.Left, cancellationToken).Type, semanticModel.Compilation);
+
+                // The enclosing member's return type is fixed, so 'return'/'=>' cannot adapt.
+                case ReturnStatementSyntax:
+                case ArrowExpressionClauseSyntax:
+                    return IsReferenceTuple(semanticModel.GetTypeInfo(expression, cancellationToken).ConvertedType, semanticModel.Compilation);
+
+                case ArgumentSyntax argument:
+                    return ArgumentConversionWouldBreak(semanticModel, argument, cancellationToken);
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool InitializerTargetIsReferenceTuple(SemanticModel semanticModel, EqualsValueClauseSyntax equalsValue, CancellationToken cancellationToken)
+        {
+            TypeSyntax? targetType = equalsValue.Parent switch
+            {
+                VariableDeclaratorSyntax { Parent: VariableDeclarationSyntax declaration } => declaration.Type,
+                PropertyDeclarationSyntax property => property.Type,
+                ParameterSyntax parameter => parameter.Type,
+                _ => null,
+            };
+
+            // A 'var' declaration rebinds to the rewritten type; an explicit 'Tuple' declaration does not.
+            if (targetType is null || targetType.IsVar)
+            {
+                return false;
+            }
+
+            return IsReferenceTuple(semanticModel.GetTypeInfo(targetType, cancellationToken).Type, semanticModel.Compilation);
+        }
+
+        private static bool ArgumentConversionWouldBreak(SemanticModel semanticModel, ArgumentSyntax argument, CancellationToken cancellationToken)
+        {
+            if (semanticModel.GetOperation(argument, cancellationToken) is not IArgumentOperation { Parameter: { } parameter })
+            {
+                return false;
+            }
+
+            // A parameter typed as a method type parameter that the call infers from its arguments adapts to a
+            // rewritten argument, so the call still binds ('Tuple.Create(x, Tuple.Create(...))'). A constructor's
+            // parameters and any explicitly specified method type arguments are fixed and cannot adapt.
+            if (parameter.OriginalDefinition.Type is ITypeParameterSymbol { DeclaringMethod: not null } &&
+                argument.FirstAncestorOrSelf<InvocationExpressionSyntax>()?.Expression is { } callee &&
+                callee is not GenericNameSyntax and not MemberAccessExpressionSyntax { Name: GenericNameSyntax })
+            {
+                return false;
+            }
+
+            return IsReferenceTuple(parameter.Type, semanticModel.Compilation);
+        }
+
+        private static bool IsReferenceTuple(ITypeSymbol? type, Compilation compilation)
+        {
+            if (type is not INamedTypeSymbol { IsReferenceType: true } named)
+            {
+                return false;
+            }
+
+            var arity = named.Arity;
+            if (arity is < 1 or > 8)
+            {
+                return false;
+            }
+
+            return SymbolEqualityComparer.Default.Equals(
+                named.OriginalDefinition,
+                compilation.GetTypeByMetadataName($"System.Tuple`{arity}"));
         }
     }
 }
