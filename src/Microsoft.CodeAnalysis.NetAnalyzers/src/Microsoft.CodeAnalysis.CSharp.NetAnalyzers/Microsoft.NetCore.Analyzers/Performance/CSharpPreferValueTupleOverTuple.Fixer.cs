@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Analyzer.Utilities;
+using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -145,19 +146,22 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             // Only a 'var' local reaches here as fixable; an explicit 'Tuple' local is already declined by the
-            // conversion check. The local's every reference lives in the block that declares it, so scanning that
-            // block finds them all, and symbol identity keeps look-alikes in sibling scopes out.
+            // conversion check. Walk the operation tree from the declaration up to its enclosing executable body,
+            // which finds every reference for a method body, top-level statements, a lambda, or an initializer
+            // alike - a syntactic block walk would miss them all for a top-level local, which has no enclosing
+            // block. Symbol identity keeps look-alikes in sibling scopes out.
             if (expression.Parent is not EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax declarator } ||
                 semanticModel.GetDeclaredSymbol(declarator, cancellationToken) is not ILocalSymbol local ||
-                declarator.FirstAncestorOrSelf<BlockSyntax>() is not { } scope)
+                semanticModel.GetOperation(declarator, cancellationToken) is not { } declaration)
             {
                 return false;
             }
 
-            foreach (var identifier in scope.DescendantNodes().OfType<IdentifierNameSyntax>())
+            foreach (var reference in declaration.GetRoot().Descendants().OfType<ILocalReferenceOperation>())
             {
-                if (SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(identifier, cancellationToken).Symbol, local) &&
-                    IsEqualityOperand(semanticModel, identifier, cancellationToken))
+                if (SymbolEqualityComparer.Default.Equals(reference.Local, local) &&
+                    reference.Syntax is ExpressionSyntax referenceSyntax &&
+                    IsEqualityOperand(semanticModel, referenceSyntax, cancellationToken))
                 {
                     return true;
                 }

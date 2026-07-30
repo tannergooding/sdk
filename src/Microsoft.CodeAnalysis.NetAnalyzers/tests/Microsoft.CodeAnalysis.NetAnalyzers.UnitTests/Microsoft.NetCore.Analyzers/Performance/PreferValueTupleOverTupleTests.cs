@@ -3,6 +3,9 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Testing;
 using VerifyCS = Test.Utilities.CSharpCodeFixVerifier<
     Microsoft.NetCore.Analyzers.Performance.PreferValueTupleOverTupleAnalyzer,
     Microsoft.NetCore.CSharp.Analyzers.Performance.CSharpPreferValueTupleOverTupleFixer>;
@@ -338,6 +341,36 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 }
                 """;
             await VerifyCS.VerifyCodeFixAsync(source, source);
+        }
+
+        [TestMethod]
+        public async Task EqualityComparisonThroughLocal_TopLevelStatements_NoFixOfferedAsync()
+        {
+            // A local declared in top-level statements has no enclosing block, so its references - and the
+            // '==' among them - are found through the operation tree rather than a syntactic block walk. The
+            // value is compared, so the fix is declined here just as it is inside a method body.
+            var source = """
+                using System;
+
+                var t = {|CA1880:Tuple.Create(1, "a")|};
+                var u = t;
+                Console.WriteLine(t == u);
+                """;
+            await new VerifyCS.Test
+            {
+                ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+                LanguageVersion = LanguageVersion.CSharp9,
+                TestState =
+                {
+                    Sources = { source },
+                    OutputKind = OutputKind.ConsoleApplication,
+                },
+                FixedState =
+                {
+                    Sources = { source },
+                    OutputKind = OutputKind.ConsoleApplication,
+                },
+            }.RunAsync(CancellationToken.None);
         }
 
         [TestMethod]
