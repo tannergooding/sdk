@@ -72,6 +72,36 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         }
 
         [TestMethod]
+        public async Task TupleCreate_NamedAndReorderedArguments_Diagnostic_AndFixAsync()
+        {
+            // The fix swaps only the 'Tuple' name and leaves the argument list untouched, so named and
+            // reordered arguments are preserved verbatim and the rewrite stays correct.
+            var source = """
+                using System;
+
+                public class C
+                {
+                    public void M()
+                    {
+                        var t = [|Tuple.Create(item2: "a", item1: 1)|];
+                    }
+                }
+                """;
+            var fixedSource = """
+                using System;
+
+                public class C
+                {
+                    public void M()
+                    {
+                        var t = ValueTuple.Create(item2: "a", item1: 1);
+                    }
+                }
+                """;
+            await VerifyCS.VerifyCodeFixAsync(source, fixedSource);
+        }
+
+        [TestMethod]
         public async Task FullyQualifiedTupleCreate_Diagnostic_AndFixAsync()
         {
             var source = """
