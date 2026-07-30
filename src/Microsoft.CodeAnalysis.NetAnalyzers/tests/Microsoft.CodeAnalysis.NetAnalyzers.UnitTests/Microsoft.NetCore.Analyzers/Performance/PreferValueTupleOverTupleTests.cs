@@ -300,6 +300,47 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         }
 
         [TestMethod]
+        public async Task DirectEqualityComparison_NoFixOfferedAsync()
+        {
+            // 'Tuple' compares by reference, 'ValueTuple' element-wise, and both compile. Rewriting the
+            // operands would silently flip the result, so the diagnostic stands but no fix is offered.
+            var source = """
+                using System;
+
+                internal class C
+                {
+                    private bool M()
+                    {
+                        return {|CA1880:Tuple.Create(1, "a")|} == {|CA1880:Tuple.Create(1, "a")|};
+                    }
+                }
+                """;
+            await VerifyCS.VerifyCodeFixAsync(source, source);
+        }
+
+        [TestMethod]
+        public async Task EqualityComparisonThroughLocal_NoFixOfferedAsync()
+        {
+            // The comparison is on the 'var' locals the allocations initialize rather than on the
+            // allocations directly, but rewriting them changes '==' from reference to structural equality
+            // just the same, so neither allocation is offered a fix.
+            var source = """
+                using System;
+
+                internal class C
+                {
+                    private bool M()
+                    {
+                        var t = {|CA1880:Tuple.Create(1, "a")|};
+                        var other = {|CA1880:Tuple.Create(1, "a")|};
+                        return t != other;
+                    }
+                }
+                """;
+            await VerifyCS.VerifyCodeFixAsync(source, source);
+        }
+
+        [TestMethod]
         public async Task ValueTuple_NoDiagnosticAsync()
         {
             var source = """

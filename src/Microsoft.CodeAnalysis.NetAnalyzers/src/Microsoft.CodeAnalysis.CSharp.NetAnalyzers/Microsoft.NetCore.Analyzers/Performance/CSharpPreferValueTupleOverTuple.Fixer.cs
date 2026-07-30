@@ -51,11 +51,13 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
                 return;
             }
 
-            // Swapping only the callsite breaks the build when the allocation flows into a location that is
-            // independently typed as the reference 'Tuple' (e.g. 'Tuple<int, string> t = Tuple.Create(...)').
-            // Still report the diagnostic, but do not offer a fix that would not compile.
+            // Swapping only the callsite can produce code that no longer means what it did. It breaks the
+            // build when the allocation flows into a location independently typed as the reference 'Tuple'
+            // (e.g. 'Tuple<int, string> t = Tuple.Create(...)'), and it silently changes '==' from reference
+            // to structural equality when the value is compared. In either case still report the diagnostic,
+            // but do not offer a fix.
             var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-            if (semanticModel is null || ConversionWouldBreakBuild(semanticModel, node, context.CancellationToken))
+            if (semanticModel is null || FixWouldChangeMeaning(semanticModel, node, context.CancellationToken))
             {
                 return;
             }
@@ -81,7 +83,7 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 
                 if (GetTupleNameToReplace(node) is { } tupleName &&
                     semanticModel is not null &&
-                    !ConversionWouldBreakBuild(semanticModel, node, cancellationToken))
+                    !FixWouldChangeMeaning(semanticModel, node, cancellationToken))
                 {
                     editor.ReplaceNode(tupleName, (currentNode, _) => WithValueTupleIdentifier((SimpleNameSyntax)currentNode));
                 }
@@ -118,6 +120,62 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             return tupleName is GenericNameSyntax genericName
                 ? genericName.WithIdentifier(newIdentifier)
                 : SyntaxFactory.IdentifierName(newIdentifier);
+        }
+
+        private static bool FixWouldChangeMeaning(SemanticModel semanticModel, SyntaxNode allocation, CancellationToken cancellationToken)
+            => ConversionWouldBreakBuild(semanticModel, allocation, cancellationToken)
+                || EqualityComparisonWouldChangeSemantics(semanticModel, allocation, cancellationToken);
+
+        // 'Tuple' derives '==' from 'object' (reference identity), whereas 'ValueTuple' overloads it to compare
+        // element-wise, and the swap compiles either way. So a reported allocation whose value is compared with
+        // '==' or '!=' - directly, or through the local it initializes - would change results with no diagnostic
+        // to warn the user. Decline the fix rather than change behavior silently.
+        private static bool EqualityComparisonWouldChangeSemantics(SemanticModel semanticModel, SyntaxNode allocation, CancellationToken cancellationToken)
+        {
+            var expression = (ExpressionSyntax)allocation;
+
+            if (IsEqualityOperand(semanticModel, expression, cancellationToken))
+            {
+                return true;
+            }
+
+            while (expression.Parent is ParenthesizedExpressionSyntax parenthesized)
+            {
+                expression = parenthesized;
+            }
+
+            // Only a 'var' local reaches here as fixable; an explicit 'Tuple' local is already declined by the
+            // conversion check. The local's every reference lives in the block that declares it, so scanning that
+            // block finds them all, and symbol identity keeps look-alikes in sibling scopes out.
+            if (expression.Parent is not EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax declarator } ||
+                semanticModel.GetDeclaredSymbol(declarator, cancellationToken) is not ILocalSymbol local ||
+                declarator.FirstAncestorOrSelf<BlockSyntax>() is not { } scope)
+            {
+                return false;
+            }
+
+            foreach (var identifier in scope.DescendantNodes().OfType<IdentifierNameSyntax>())
+            {
+                if (SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(identifier, cancellationToken).Symbol, local) &&
+                    IsEqualityOperand(semanticModel, identifier, cancellationToken))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsEqualityOperand(SemanticModel semanticModel, ExpressionSyntax expression, CancellationToken cancellationToken)
+        {
+            while (expression.Parent is ParenthesizedExpressionSyntax parenthesized)
+            {
+                expression = parenthesized;
+            }
+
+            return expression.Parent is BinaryExpressionSyntax binary &&
+                (binary.Left == expression || binary.Right == expression) &&
+                semanticModel.GetOperation(binary, cancellationToken) is IBinaryOperation { OperatorKind: BinaryOperatorKind.Equals or BinaryOperatorKind.NotEquals };
         }
 
         // A 'ValueTuple' is convertible to 'object' and to every interface the reference 'Tuple' implements,
