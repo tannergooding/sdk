@@ -2499,8 +2499,8 @@ Enumerable.OfType&lt;T&gt;에서 사용하는 제네릭 형식 검사(C# 'is' �
         <note />
       </trans-unit>
       <trans-unit id="PreferValueTupleOverTupleDescription">
-        <source>The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.</source>
-        <target state="new">The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.</target>
+        <source>The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax.</source>
+        <target state="new">The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax.</target>
         <note />
       </trans-unit>
       <trans-unit id="PreferValueTupleOverTupleMessage">

@@ -164,7 +164,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     public void M()
                     {
-                        var t = {|CA1880:Tuple.Create(1, {|CA1880:Tuple.Create(2, 3)|})|};
+                        var t = {|CA1878:Tuple.Create(1, {|CA1878:Tuple.Create(2, 3)|})|};
                     }
                 }
                 """;
@@ -263,6 +263,58 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
         }
 
         [TestMethod]
+        public async Task MixedFixableAndUnfixable_FixAllFixesOnlyTheFixableAsync()
+        {
+            // Fix-all is handed every diagnostic the rule reported, not just the ones registration
+            // accepted, so the eligibility check has to run again per diagnostic. Here one document
+            // carries all three shapes: a fixable allocation, a signature, and an allocation flowing
+            // into an explicitly typed 'Tuple' local. Only the first may be rewritten.
+            var source = """
+                using System;
+
+                internal class C
+                {
+                    private Tuple<int, string> [|_field|];
+
+                    public void M()
+                    {
+                        var fixable = [|Tuple.Create(1, "a")|];
+                        Tuple<int, string> pinned = [|Tuple.Create(2, "b")|];
+                    }
+                }
+                """;
+            var fixedSource = """
+                using System;
+
+                internal class C
+                {
+                    private Tuple<int, string> _field;
+
+                    public void M()
+                    {
+                        var fixable = ValueTuple.Create(1, "a");
+                        Tuple<int, string> pinned = Tuple.Create(2, "b");
+                    }
+                }
+                """;
+            await new VerifyCS.Test
+            {
+                TestCode = source,
+                FixedCode = fixedSource,
+                // The two declined shapes still report after the fix-all pass; only the allocation
+                // assigned to 'var' is rewritten.
+                FixedState =
+                {
+                    ExpectedDiagnostics =
+                    {
+                        VerifyCS.Diagnostic().WithSpan(5, 32, 5, 38),
+                        VerifyCS.Diagnostic().WithSpan(10, 37, 10, 57),
+                    },
+                },
+            }.RunAsync(CancellationToken.None);
+        }
+
+        [TestMethod]
         public async Task ExplicitTupleTarget_NoFixOfferedAsync()
         {
             // The allocation is still worth flagging, but swapping only the callsite would leave a
@@ -295,7 +347,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     private void M()
                     {
-                        Tuple<int, Tuple<string, int>> t = {|CA1880:new Tuple<int, Tuple<string, int>>(1, {|CA1880:new Tuple<string, int>("a", 2)|})|};
+                        Tuple<int, Tuple<string, int>> t = {|CA1878:new Tuple<int, Tuple<string, int>>(1, {|CA1878:new Tuple<string, int>("a", 2)|})|};
                     }
                 }
                 """;
@@ -314,7 +366,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     private bool M()
                     {
-                        return {|CA1880:Tuple.Create(1, "a")|} == {|CA1880:Tuple.Create(1, "a")|};
+                        return {|CA1878:Tuple.Create(1, "a")|} == {|CA1878:Tuple.Create(1, "a")|};
                     }
                 }
                 """;
@@ -334,8 +386,8 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     private bool M()
                     {
-                        var t = {|CA1880:Tuple.Create(1, "a")|};
-                        var other = {|CA1880:Tuple.Create(1, "a")|};
+                        var t = {|CA1878:Tuple.Create(1, "a")|};
+                        var other = {|CA1878:Tuple.Create(1, "a")|};
                         return t != other;
                     }
                 }
@@ -352,7 +404,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             var source = """
                 using System;
 
-                var t = {|CA1880:Tuple.Create(1, "a")|};
+                var t = {|CA1878:Tuple.Create(1, "a")|};
                 var u = t;
                 Console.WriteLine(t == u);
                 """;
@@ -454,7 +506,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 TestState =
                 {
                     Sources = { source },
-                    AnalyzerConfigFiles = { ("/.editorconfig", "[*]\r\ndotnet_code_quality.CA1880.api_surface = all") },
+                    AnalyzerConfigFiles = { ("/.editorconfig", "[*]\r\ndotnet_code_quality.CA1878.api_surface = all") },
                 },
             }.RunAsync(CancellationToken.None);
         }

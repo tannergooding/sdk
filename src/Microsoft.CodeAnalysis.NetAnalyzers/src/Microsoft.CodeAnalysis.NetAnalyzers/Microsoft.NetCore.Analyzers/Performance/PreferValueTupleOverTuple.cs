@@ -13,18 +13,30 @@ namespace Microsoft.NetCore.Analyzers.Performance
     using static MicrosoftNetCoreAnalyzersResources;
 
     /// <summary>
-    /// CA1880: <inheritdoc cref="PreferValueTupleOverTupleTitle"/>
+    /// CA1878: <inheritdoc cref="PreferValueTupleOverTupleTitle"/>
     /// Flags usages of the reference-type <see cref="System.Tuple"/> family where the
     /// value-type <see cref="System.ValueTuple"/> family would avoid an allocation.
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
     public sealed class PreferValueTupleOverTupleAnalyzer : DiagnosticAnalyzer
     {
-        internal const string RuleId = "CA1880";
+        internal const string RuleId = "CA1878";
+
+        // Indexed by arity - 1. Constant strings, so this is safe as a static despite the general rule
+        // against analyzer fields: it holds nothing derived from a compilation.
+        internal static readonly ImmutableArray<string> TupleTypeNames = ImmutableArray.Create(
+            WellKnownTypeNames.SystemTuple1,
+            WellKnownTypeNames.SystemTuple2,
+            WellKnownTypeNames.SystemTuple3,
+            WellKnownTypeNames.SystemTuple4,
+            WellKnownTypeNames.SystemTuple5,
+            WellKnownTypeNames.SystemTuple6,
+            WellKnownTypeNames.SystemTuple7,
+            WellKnownTypeNames.SystemTuple8);
 
         // By default only report on the non-public API surface, since converting an exposed 'Tuple'
         // is a source/binary breaking change. Users can opt in to the public surface via the
-        // 'dotnet_code_quality.CA1880.api_surface' editorconfig option.
+        // 'dotnet_code_quality.CA1878.api_surface' editorconfig option.
         private const SymbolVisibilityGroup DefaultSignatureVisibility = SymbolVisibilityGroup.Internal | SymbolVisibilityGroup.Private;
 
         internal static readonly DiagnosticDescriptor Rule = DiagnosticDescriptorHelper.Create(
@@ -46,10 +58,10 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
             context.RegisterCompilationStartAction(context =>
             {
-                var tupleTypesBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>(8);
-                for (var arity = 1; arity <= 8; arity++)
+                var tupleTypesBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>(TupleTypeNames.Length);
+                foreach (var tupleTypeName in TupleTypeNames)
                 {
-                    if (context.Compilation.TryGetOrCreateTypeByMetadataName($"System.Tuple`{arity}", out var tupleType))
+                    if (context.Compilation.TryGetOrCreateTypeByMetadataName(tupleTypeName, out var tupleType))
                     {
                         tupleTypesBuilder.Add(tupleType);
                     }

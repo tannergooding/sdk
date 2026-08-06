@@ -2319,7 +2319,7 @@ Widening and user defined conversions are not supported with generic types.</val
     <value>Prefer the value type 'ValueTuple' over the reference type 'Tuple' to avoid an allocation</value>
   </data>
   <data name="PreferValueTupleOverTupleDescription" xml:space="preserve">
-    <value>The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax. By default this rule only flags non-public API; configure 'dotnet_code_quality.CA1880.api_surface' to also flag the public API surface, keeping in mind that changing an exposed 'Tuple' is a breaking change.</value>
+    <value>The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax.</value>
   </data>
   <data name="PreferValueTupleOverTupleCodeFixTitle" xml:space="preserve">
     <value>Replace 'Tuple' with 'ValueTuple'</value>

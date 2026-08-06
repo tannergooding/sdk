@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 using Analyzer.Utilities;
 using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using Microsoft.CodeAnalysis.NetAnalyzers;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.NetCore.Analyzers;
 using Microsoft.NetCore.Analyzers.Performance;
@@ -21,24 +21,17 @@ using Microsoft.NetCore.Analyzers.Performance;
 namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 {
     /// <summary>
-    /// CA1880: Prefer 'ValueTuple' over 'Tuple'.
+    /// CA1878: Prefer 'ValueTuple' over 'Tuple'.
     /// Rewrites 'new Tuple&lt;...&gt;(...)' and 'Tuple.Create(...)' callsites to their 'ValueTuple'
     /// equivalents. The generic type arguments are preserved, so the rewrite does not change the
     /// element types (unlike converting to C# tuple syntax, which would re-run type inference).
     /// </summary>
     [ExportCodeFixProvider(LanguageNames.CSharp), Shared]
-    public sealed class CSharpPreferValueTupleOverTupleFixer : CodeFixProvider
+    public sealed class CSharpPreferValueTupleOverTupleFixer : SyntaxEditorBasedCodeFixProvider
     {
         private const string ValueTupleName = "ValueTuple";
 
         public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(PreferValueTupleOverTupleAnalyzer.RuleId);
-
-        // The rule reports both fixable callsite allocations and non-fixable signature usages under one ID,
-        // and reported allocations can nest ('Tuple.Create(1, Tuple.Create(2, 3))'). Fix-all therefore rewrites
-        // inside-out through a single editor so an outer rewrite observes the inner ones, rather than merging
-        // independent edits the way the batch fixer would.
-        public override FixAllProvider GetFixAllProvider()
-            => FixAllProvider.Create(async (fixAllContext, document, diagnostics) => await FixAllAsync(document, diagnostics, fixAllContext.CancellationToken).ConfigureAwait(false));
 
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
@@ -63,34 +56,28 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
                 return;
             }
 
-            context.RegisterCodeFix(
-                CodeAction.Create(
-                    title: MicrosoftNetCoreAnalyzersResources.PreferValueTupleOverTupleCodeFixTitle,
-                    createChangedDocument: cancellationToken => FixAllAsync(context.Document, ImmutableArray.Create(context.Diagnostics[0]), cancellationToken),
-                    equivalenceKey: nameof(MicrosoftNetCoreAnalyzersResources.PreferValueTupleOverTupleCodeFixTitle)),
-                context.Diagnostics[0]);
+            RegisterCodeFix(
+                context,
+                MicrosoftNetCoreAnalyzersResources.PreferValueTupleOverTupleCodeFixTitle,
+                nameof(MicrosoftNetCoreAnalyzersResources.PreferValueTupleOverTupleCodeFixTitle));
         }
 
-        private static async Task<Document> FixAllAsync(Document document, ImmutableArray<Diagnostic> diagnostics, CancellationToken cancellationToken)
+        protected override async Task ApplyFixAsync(Document document, Diagnostic diagnostic, SyntaxEditor editor, CancellationToken cancellationToken)
         {
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-            var editor = await DocumentEditor.CreateAsync(document, cancellationToken).ConfigureAwait(false);
-            var root = editor.OriginalRoot;
+            var node = editor.OriginalRoot.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true);
 
-            // Inner nodes come first so an enclosing rewrite is applied after the ones it contains.
-            foreach (var diagnostic in diagnostics.OrderByDescending(diagnostic => diagnostic.Location.SourceSpan.Start))
+            // A fix-all pass is handed every diagnostic the rule reported, including the signature and
+            // meaning-changing shapes registration declines, so the eligibility check runs again here.
+            if (GetTupleNameToReplace(node) is not { } tupleName ||
+                semanticModel is null ||
+                FixWouldChangeMeaning(semanticModel, node, cancellationToken))
             {
-                var node = root.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true);
-
-                if (GetTupleNameToReplace(node) is { } tupleName &&
-                    semanticModel is not null &&
-                    !FixWouldChangeMeaning(semanticModel, node, cancellationToken))
-                {
-                    editor.ReplaceNode(tupleName, (currentNode, _) => WithValueTupleIdentifier((SimpleNameSyntax)currentNode));
-                }
+                return;
             }
 
-            return editor.GetChangedDocument();
+            // The lambda overload, so that an enclosing rewrite observes the nested ones already applied.
+            editor.ReplaceNode(tupleName, (currentNode, _) => WithValueTupleIdentifier((SimpleNameSyntax)currentNode));
         }
 
         private static SimpleNameSyntax? GetTupleNameToReplace(SyntaxNode node) => node switch
@@ -270,9 +257,8 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
                 return false;
             }
 
-            return SymbolEqualityComparer.Default.Equals(
-                named.OriginalDefinition,
-                compilation.GetTypeByMetadataName($"System.Tuple`{arity}"));
+            return compilation.TryGetOrCreateTypeByMetadataName(PreferValueTupleOverTupleAnalyzer.TupleTypeNames[arity - 1], out var tupleType) &&
+                SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, tupleType);
         }
     }
 }
