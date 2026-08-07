@@ -164,7 +164,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     public void M()
                     {
-                        var t = {|CA1878:Tuple.Create(1, {|CA1878:Tuple.Create(2, 3)|})|};
+                        var t = {|CA1880:Tuple.Create(1, {|CA1880:Tuple.Create(2, 3)|})|};
                     }
                 }
                 """;
@@ -347,7 +347,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     private void M()
                     {
-                        Tuple<int, Tuple<string, int>> t = {|CA1878:new Tuple<int, Tuple<string, int>>(1, {|CA1878:new Tuple<string, int>("a", 2)|})|};
+                        Tuple<int, Tuple<string, int>> t = {|CA1880:new Tuple<int, Tuple<string, int>>(1, {|CA1880:new Tuple<string, int>("a", 2)|})|};
                     }
                 }
                 """;
@@ -366,7 +366,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     private bool M()
                     {
-                        return {|CA1878:Tuple.Create(1, "a")|} == {|CA1878:Tuple.Create(1, "a")|};
+                        return {|CA1880:Tuple.Create(1, "a")|} == {|CA1880:Tuple.Create(1, "a")|};
                     }
                 }
                 """;
@@ -386,8 +386,8 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 {
                     private bool M()
                     {
-                        var t = {|CA1878:Tuple.Create(1, "a")|};
-                        var other = {|CA1878:Tuple.Create(1, "a")|};
+                        var t = {|CA1880:Tuple.Create(1, "a")|};
+                        var other = {|CA1880:Tuple.Create(1, "a")|};
                         return t != other;
                     }
                 }
@@ -404,7 +404,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             var source = """
                 using System;
 
-                var t = {|CA1878:Tuple.Create(1, "a")|};
+                var t = {|CA1880:Tuple.Create(1, "a")|};
                 var u = t;
                 Console.WriteLine(t == u);
                 """;
@@ -506,7 +506,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
                 TestState =
                 {
                     Sources = { source },
-                    AnalyzerConfigFiles = { ("/.editorconfig", "[*]\r\ndotnet_code_quality.CA1878.api_surface = all") },
+                    AnalyzerConfigFiles = { ("/.editorconfig", "[*]\r\ndotnet_code_quality.CA1880.api_surface = all") },
                 },
             }.RunAsync(CancellationToken.None);
         }

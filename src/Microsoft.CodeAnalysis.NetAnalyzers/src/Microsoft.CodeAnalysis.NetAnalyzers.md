@@ -1944,7 +1944,7 @@ When multiple Path.Combine or Path.Join operations are nested, they can be colla
 |CodeFix|True|
 ---
 
-## [CA1878](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1878): Prefer 'ValueTuple' over 'Tuple'
+## [CA1880](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1880): Prefer 'ValueTuple' over 'Tuple'
 
 The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax.
 

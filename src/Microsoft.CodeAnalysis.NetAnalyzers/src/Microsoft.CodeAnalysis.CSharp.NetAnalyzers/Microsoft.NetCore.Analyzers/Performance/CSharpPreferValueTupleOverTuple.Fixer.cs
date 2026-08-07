@@ -21,7 +21,7 @@ using Microsoft.NetCore.Analyzers.Performance;
 namespace Microsoft.NetCore.CSharp.Analyzers.Performance
 {
     /// <summary>
-    /// CA1878: Prefer 'ValueTuple' over 'Tuple'.
+    /// CA1880: Prefer 'ValueTuple' over 'Tuple'.
     /// Rewrites 'new Tuple&lt;...&gt;(...)' and 'Tuple.Create(...)' callsites to their 'ValueTuple'
     /// equivalents. The generic type arguments are preserved, so the rewrite does not change the
     /// element types (unlike converting to C# tuple syntax, which would re-run type inference).

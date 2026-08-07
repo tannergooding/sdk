@@ -3586,12 +3586,12 @@
             ]
           }
         },
-        "CA1878": {
-          "id": "CA1878",
+        "CA1880": {
+          "id": "CA1880",
           "shortDescription": "Prefer 'ValueTuple' over 'Tuple'",
           "fullDescription": "The 'System.ValueTuple' types are value types that avoid the heap allocation incurred by the reference type 'System.Tuple' types, and are usable through the C# tuple syntax.",
           "defaultLevel": "note",
-          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1878",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1880",
           "properties": {
             "category": "Performance",
             "isEnabledByDefault": true,
